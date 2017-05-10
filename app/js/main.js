@@ -2,8 +2,10 @@ const { ipcRenderer, clipboard } = require('electron');
 const path                       = require('path');
 const packageInfo                = require(path.join(__dirname, 'package.json'));
 
+
 const Dexie = require('dexie');
 const db = new Dexie('clipboard');
+
 
 db.version(1).stores({
   items: '++id, &text, favorite'
@@ -91,8 +93,8 @@ const vm = new Vue({
     /**
      * Hides app window.
      */
-    hideWindow() {
-      ipcRenderer.send('hideWindow');
+    hideWindow(pasteClipboard) {
+      ipcRenderer.send('hideWindow', pasteClipboard === true); // pasteClipboard can be EventsArgs
     },
 
     /**
@@ -147,7 +149,9 @@ const vm = new Vue({
             this.query             = '';
             this.currentSearchPage =  0;
 
-            this.hideWindow();
+            this.hideWindow(true);
+
+
           });
         });
     },
@@ -230,21 +234,41 @@ const vm = new Vue({
      * @param {String} needle
      */
     searchClipboard(needle) {
-      db.items.where('text').startsWithIgnoreCase(needle).count((count) => {
-        vm.searchItemCount = count;
-      });
+      needle = needle.toLowerCase()
+      // db.items.where('text').startsWithIgnoreCase(needle).count((count) => {
+      //   vm.searchItemCount = count;
+      // });
+      //
+      // db.items
+      //   .where('text').startsWithIgnoreCase(needle)
+      //   .reverse()
+      //   .offset(9 * vm.currentSearchPage)
+      //   .limit(9)
+      //   .sortBy('id')
+      //   .then((items) => {
+      //     vm.searchResults = [];
+      //
+      //     items.forEach((item) => vm.searchResults.push(item.text));
+      //   });
 
-      db.items
-        .where('text').startsWithIgnoreCase(needle)
-        .reverse()
-        .offset(9 * vm.currentSearchPage)
-        .limit(9)
-        .sortBy('id')
-        .then((items) => {
-          vm.searchResults = [];
+      var findResult = new Dexie.Promise(function(resolve){
+        var results = [];
+        db.items
+          .orderBy('text')
+          .eachUniqueKey(function(text){
+            if(text.toLowerCase().indexOf(needle) > -1){
+              results.push(text);
+            }
+          }).then(function(){
+            resolve(results);
+          })
+      })
 
-          items.forEach((item) => vm.searchResults.push(item.text));
-        });
+      findResult.then(function(searchResults){
+        vm.searchResults = searchResults;
+        vm.searchItemCount = searchResults.length;
+      })
+
     },
 
     /**

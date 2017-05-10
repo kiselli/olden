@@ -13,6 +13,7 @@ const {
 
 const path = require('path');
 const fs   = require('fs');
+const robot = require("robotjs");
 
 let mainWindow    = null;
 let tray          = null;
@@ -39,7 +40,7 @@ app.on('ready', () => {
 
   // The trigger used to show/hide the app window.
   // TODO: allow user to set a custom shortcut.
-  globalShortcut.register('Alt+Space', () => {
+  globalShortcut.register('Cmd+Shift+v', () => {
     if (mainWindow.isVisible()) {
       if (app.hide) {
         // NOTE: to get focus back to the previous window on MacOS we need to
@@ -92,12 +93,16 @@ app.on('ready', () => {
     mainWindow.webContents.openDevTools({ mode: 'detach' });
   }
 
-  ipcMain.on('hideWindow', (event) => {
+  ipcMain.on('hideWindow', (event, pasteClipboard) => {
     if (app.hide) {
         app.hide();
       } else {
         mainWindow.blur();
         mainWindow.hide()
+      }
+      
+      if(pasteClipboard){
+        robot.keyTap('v','command')
       }
   });
 

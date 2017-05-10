@@ -4,6 +4,8 @@ const rimraf      = require('rimraf');
 const path        = require('path');
 const exec        = require('child_process').exec;
 const packageInfo = require(path.join(__dirname, '..', 'package.json'));
+const rebuild     = require('electron-rebuild').rebuild;
+
 
 function createDMG(appPaths) {
   var dmgCreator = appdmg({
@@ -43,7 +45,12 @@ if (process.platform === 'darwin') {
     platform: 'darwin',
     version:  '1.4.13',
     asar:     true,
-    name:     'Olden'
+    name:     'Olden',
+    afterCopy: [(buildPath, electronVersion, platform, arch, callback) => {
+      rebuild(buildPath, electronVersion, arch)
+        .then(() => callback())
+        .catch((error) => callback(error));
+    }],
   }, function(err, appPaths) {
     if (err) {
       console.log(err);
